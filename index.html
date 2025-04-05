@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Horror Hideout</title>
+  <script type="text/javascript" src="graphics/assetmanager.js"></script>
+  <script type="text/javascript" src="core/timer.js"></script>
+  <script type="text/javascript" src="core/gameengine.js"></script>
+  <script type="text/javascript" src="core/settings.js"></script>
+  <script type="text/javascript" src="core/util.js"></script>
+  <script type="text/javascript" src="core/titleScreen.js"></script>
+  <script type="text/javascript" src="core/minimap.js"></script>
+  <script type="text/javascript" src="core/winScreen.js"></script>
+  <script type="text/javascript" src="map/tilemap.js"></script>
+  <script type="text/javascript" src="core/building.js"></script>
+  <script type="text/javascript" src="core/loseScreen.js"></script>
+  <script type="text/javascript" src="core/projectiles.js"></script>
+  <script type="text/javascript" src="core/buildingfactory.js"></script>
+  <script type="text/javascript" src="entities/hero.js"></script>
+  <script type="text/javascript" src="entities/cabin.js"></script>
+  <script type="text/javascript" src="entities/tree.js"></script>
+  <script type="text/javascript" src="entities/stone.js"></script>
+  <script type="text/javascript" src="entities/energy.js"></script>
+  <script type="text/javascript" src="graphics/animator.js"></script>
+  <script type="text/javascript" src="graphics/camera.js"></script>
+  <script type="text/javascript" src="entities/enemy.js"></script>
+  <script type="text/javascript" src="entities/enemyspawner.js"></script>
+  <script type="text/javascript" src="core/resourceBar.js"></script>
+  <script type="text/javascript" src="core/main.js"></script>
+
+  <style>
+    @font-face {
+      font-family: regularFont;
+      src: url(assets/font/pixel_font_reg.ttf);
+    }
+    @font-face {
+      font-family: boldFont;
+      src: url(assets/font/pixel_font_bold.ttf);
+    }
+    body {
+      margin: 0;
+      background-color: black;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    canvas {
+      background-color: black;
+      background-size: 100px 100px;
+      border: 2px solid black;
+    }
+
+    /* GUI Styles */
+    #musicControls {
+      display: flex;
+      font-family: regularFont,serif;
+      flex-direction: column;
+      align-items: center;
+      margin-top: 10px;
+      color: red;
+    }
+
+    #controls {
+      color: white;
+      font-family: regularFont,serif;
+      background-color: rgba(0, 0, 0, 0.5);
+      padding: 10px;
+      border-radius: 5px;
+      position: absolute;
+      top: 50%;
+      left: 20px; /* Adjust distance from left edge */
+      transform: translateY(-50%); /* Center vertically */
+    }
+
+    #controls img { /* Target images inside #controls */
+      width: 150px;  /* Adjust the value as needed */
+      height: 60px; /* Adjust the value as needed */
+    }
+    #resourceCost {
+      color: white;
+      font-family: regularFont,serif;
+      background-color: rgba(0, 0, 0, 0.5);
+      padding: 10px;
+      border-radius: 5px;
+      position: absolute;
+      top: 50%;
+      right: 20px; /* Adjust distance from left edge */
+      transform: translateY(-50%); /* Center vertically */
+    }
+
+    #resourceCost img { /* Target images inside #controls */
+      width: 30px;  /* Adjust the value as needed */
+      height: 30px; /* Adjust the value as needed */
+      margin: 0;
+      padding: 0;
+    }
+
+    .tooltip {
+      position: absolute;
+      background-color: rgba(0, 0, 0, 0.8);
+      color: white;
+      padding: 5px;
+      border-radius: 5px;
+      display: none;
+      z-index: 1;
+    }
+
+  </style>
+</head>
+<body>
+<canvas id="gameWorld" width="800" height="800" tabindex="0" autofocus></canvas>
+<div id="controls" >
+  <h1>Controls</h1>
+  <h3>Movement: </h3>
+  <p><img src="assets/sprites/controls/wasd.png" alt="WASD keys"></p>
+  <h3>Attack: Mouse-Click</h3>
+  <h3>Build Mode: B key</h3>
+  <p>➤ Ghost: '1' key</p>
+  <p>➤ Grave: '2' key</p>
+  <p>➤ Campfire: '3' key</p>
+  <p>➤ Mage: '4' key</p>
+  <p>➤ Totem: '5' key</p>
+  <h3>Use Energy Drink (+30 health): Enter</h3>
+</div>
+<div id="resourceCost">
+  <h1>Building Costs</h1>
+  <div class="resource-description">
+  <p>➤<img src="assets/sprites/resources/ghost.png" alt="ghost" width="20" height="20"/>:
+    <img src="assets/sprites/resources/wood.png" alt="wood" width="20" height="20">
+    <img src="assets/sprites/resources/stone.png" alt="stone" width="20" height="20">
+  </p>
+    <div class="tooltip">Ghost: Used for giving -25 damage to killer</div>
+  </div>
+  <div class="resource-description">
+  <p>➤<img src="assets/sprites/resources/grave.png" alt="grave" width="20" height="20"/>:
+    <img src="assets/sprites/resources/stone.png" alt="stone" width="20" height="20">
+    <img src="assets/sprites/resources/stone.png" alt="stone" width="20" height="20"></p>
+    <div class="tooltip">Grave: Used for defense</div>
+  </div>
+  <div class="resource-description">
+  <p>➤<img src="assets/sprites/resources/campfire.png" alt="campfire" width="20" height="20"/>:
+    <img src="assets/sprites/resources/wood.png" alt="wood" width="20" height="20">
+    <img src="assets/sprites/resources/wood.png" alt="wood" width="20" height="20"></p>
+    <div class="tooltip">Campfire: Used for light source </div>
+  </div>
+  <div class="resource-description">
+  <p>➤<img src="assets/sprites/resources/mage.png" alt="mage" width="20" height="20"/>:
+    <img src="assets/sprites/resources/wood.png" alt="wood" width="20" height="20">
+    <img src="assets/sprites/resources/wood.png" alt="wood" width="20" height="20">
+    <img src="assets/sprites/resources/stone.png" alt="stone" width="20" height="20">
+    <img src="assets/sprites/resources/stone.png" alt="stone" width="20" height="20"></p>
+    <div class="tooltip">Mage: used for -40 damage to killer</div>
+  </div>
+  <div class="resource-description">
+  <p>➤<img src="assets/sprites/resources/totem.png" alt="totem" width="20" height="20"/>:
+    <img src="assets/sprites/resources/wood.png" alt="wood" width="20" height="20">
+    <img src="assets/sprites/resources/wood.png" alt="wood" width="20" height="20">
+    <img src="assets/sprites/resources/wood.png" alt="wood" width="20" height="20">
+    <img src="assets/sprites/resources/stone.png" alt="stone" width="20" height="20">
+    <img src="assets/sprites/resources/stone.png" alt="stone" width="20" height="20">
+    <img src="assets/sprites/resources/stone.png" alt="stone" width="20" height="20"></p>
+    <div class="tooltip">Totem: used for -30 damage to killers within a radius of 50</div>
+  </div>
+</div>
+<div id="musicControls">
+  <br />
+  <label for="trackSelector"></label><select id="trackSelector">
+  <option value="assets/audio/music/title-screen-music.wav">Track 1</option>
+  <option value="assets/audio/music/title-screen-music2.wav">Track 2</option>
+  <option value="assets/audio/music/level-1-music.wav">Track 3</option>
+  <option value="assets/audio/music/level-2-music.wav">Track 4</option>
+  <option value="assets/audio/music/Track-5-music.wav">Track 5</option>
+  <option value="assets/audio/music/Track-6-music.wav">Track 6</option>
+  <option value="assets/audio/music/trailer_song.wav">Track 7</option>
+  <option value="assets/audio/music/track-8.wav">Track 8</option>
+  <option value="assets/audio/music/track-9.wav">Track 9</option>
+  <option value="assets/audio/music/game_complete.wav">Track 10</option>
+</select>
+  <br />
+  <button id="playMusic">Play</button>
+  <button id="stopMusic">Stop</button>
+  <button id="muteMusic">Mute</button>
+  <br />
+  <br />
+  <label for="volume"></label><input type="range" id="volume" min="0" max="1" value="0.1" step="0.05"> Volume
+  <label for="effectVolume"></label><input type="range" id="effectVolume" min="0" max="1" value="0.1" step="0.05"> SFX Volume
+
+  <div id="soundEffectToggles">
+    <h3>Sound Effects</h3>
+    <div>
+        <input type="checkbox" id="enemySpawnToggle" checked>
+        <label for="enemySpawnToggle">Enemy Spawn Sound</label>
+    </div>
+    <div>
+        <input type="checkbox" id="enemySlashToggle" checked>
+        <label for="enemySlashToggle">Enemy Slash Sound</label>
+    </div>
+    <div>
+      <input type="checkbox" id="walkingToggle" checked>
+      <label for="walkingToggle">Walking Sound</label>
+  </div>
+  <div>
+      <input type="checkbox" id="enemyDeathToggle" checked>
+      <label for="enemyDeathToggle">Enemy Death</label>
+  </div>
+  <div>
+    <input type="checkbox" id="enemyWaveToggle" checked>
+    <label for="enemyWaveToggle">Enemy Wave</label>
+  </div>
+  <div>
+    <input type="checkbox" id="ghostSpawnToggle" checked>
+    <label for="ghostSpawnToggle">Ghost Spawn</label>
+  </div>
+  <div>
+    <input type="checkbox" id="graveSpawnToggle" checked>
+    <label for="graveSpawnToggle">Grave Spawn</label>
+  </div>
+  <div>
+    <input type="checkbox" id="campfireSpawnToggle" checked>
+    <label for="campfireSpawnToggle">Campfire Spawn</label>
+  </div>
+  <div>
+    <input type="checkbox" id="MageSpawnToggle" checked>
+    <label for="MageSpawnToggle">Mage Spawn</label>
+  </div>
+  <div>
+    <input type="checkbox" id="TotemSpawnToggle" checked>
+    <label for="TotemSpawnToggle">Totem Spawn</label>
+  </div>
+
+</div>
+</div>
+</body>
+</html>
